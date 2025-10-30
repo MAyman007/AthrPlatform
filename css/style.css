@@ -408,3 +408,105 @@ section {
         left: 10px;
     }
 }
+
+/* --- Simple Fade-in Animations (slower, page-wide) --- */
+@keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Generic animation helper (idle state) */
+.animate {
+    opacity: 0;
+    /* transform: translateY(14px); */
+    will-change: opacity, transform;
+}
+
+/* Active animations: only run when .in-view is added (IntersectionObserver) */
+.animate.in-view.fade {
+    animation-name: fade-in;
+    animation-duration: 1000ms;
+    animation-timing-function: ease;
+    animation-fill-mode: forwards;
+}
+.animate.in-view.up {
+    animation-name: fade-in-up;
+    animation-duration: 1000ms;
+    animation-timing-function: cubic-bezier(.2,.8,.2,1);
+    animation-fill-mode: forwards;
+}
+.animate.in-view.slow {
+    animation-duration: 1600ms;
+    animation-fill-mode: forwards;
+}
+
+/* Simple utility delay classes for gentler staggering (apply when element is observed) */
+.animate-delay-1 { animation-delay: 0.18s; }
+.animate-delay-2 { animation-delay: 0.36s; }
+.animate-delay-3 { animation-delay: 0.54s; }
+.animate-delay-4 { animation-delay: 0.72s; }
+.animate-delay-5 { animation-delay: 0.90s; }
+
+/* NOTE: baseline page-wide animations removed.
+   Explicitly add the .animate and .animate-delay-* helpers in your HTML to enable animations.
+   This gives full control over which elements animate and their stagger timing.
+
+   Example usage:
+     <h1 class="animate up animate-delay-2">Title</h1>
+     <div class="feature-card animate up animate-delay-3">...</div>
+*/
+
+/* Staggering helpers are already defined above (.animate-delay-1 ... .animate-delay-5).
+   Keep using them in markup to sequence animations. */
+
+/* No global selectors applying animations here — animations are opt-in via .animate and
+   the variant classes (.up, .fade, .slow). */
+
+/* Respect user's reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .animate,
+    .animate.fade,
+    .animate.up,
+    header,
+    .navbar,
+    .logo,
+    .nav-links li,
+    .hero-content,
+    .features-grid .feature-card,
+    .timeline .timeline-item,
+    .cta-content,
+    .site-footer {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
+
+/* Custom Scrollbar Styles */
+html, body {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--text-secondary) transparent; /* Firefox: thumb and track */
+}
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+    background-color: var(--text-secondary);
+    border-radius: 4px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+    background: transparent;
+}

@@ -57,7 +57,7 @@
         <div class="container">
             <nav class="navbar">
                 <a href="/" class="logo-link">
-                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo"></div>
+                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo animate up animate-delay-1"></div>
                 </a>
             </nav>
         </div>
@@ -66,25 +66,53 @@
     <main>
         <section id="about" class="features">
             <div class="container" style="text-align: left; max-width: 800px;">
-                <h2>About Athr</h2>
-                <p>Athr was founded with a clear mission: to provide organizations with actionable threat intelligence that is both timely and easy to understand. In a digital landscape filled with noise, we cut through the clutter to deliver alerts that matter. We believe that proactive security shouldn't be a luxury reserved for the few, but a standard accessible to all.</p>
-                <p>Our value proposition is simple. We monitor a vast array of sources, from the dark web to public code repositories, for any mention of your organization's assets. When a potential threat is detected—be it a credential leak, a vulnerable piece of software, or chatter from a known threat actor—we don't just notify you; we provide you with the context and actionable steps needed to mitigate the risk immediately. This focus on "actionable" intelligence is what sets us apart.</p>
-                <p>Key features of the Athr platform include our secure search capabilities, which allow you to instantly query our database of monitored sources; live alerts that are prioritized based on severity; and visual analytics that help you understand your organization's threat landscape over time. With Athr, you can move from a reactive to a proactive security posture, stopping threats before they can impact your business.</p>
+                <h2 class="animate up animate-delay-1">About Athr</h2>
+                <p class="animate up animate-delay-2">Athr was founded with a clear mission: to provide organizations with actionable threat intelligence that is both timely and easy to understand. In a digital landscape filled with noise, we cut through the clutter to deliver alerts that matter. We believe that proactive security shouldn't be a luxury reserved for the few, but a standard accessible to all.</p>
+                <p class="animate up animate-delay-3">Our value proposition is simple. We monitor a vast array of sources, from the dark web to public code repositories, for any mention of your organization's assets. When a potential threat is detected—be it a credential leak, a vulnerable piece of software, or chatter from a known threat actor—we don't just notify you; we provide you with the context and actionable steps needed to mitigate the risk immediately. This focus on "actionable" intelligence is what sets us apart.</p>
+                <p class="animate up animate-delay-4">Key features of the Athr platform include our secure search capabilities, which allow you to instantly query our database of monitored sources; live alerts that are prioritized based on severity; and visual analytics that help you understand your organization's threat landscape over time. With Athr, you can move from a reactive to a proactive security posture, stopping threats before they can impact your business.</p>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container">
-            <p class="copyright">&copy; 2025 Athr Intelligence. All rights reserved.</p>
+            <p class="copyright animate fade animate-delay-1">&copy; 2025 Athr Intelligence. All rights reserved.</p>
             <ul class="footer-links">
-                <li><a href="">About</a></li>
-                <li><a href="../contact">Contact</a></li>
-                <li><a href="../privacy-policy">Privacy Policy</a></li>
-                <li><a href="../terms-of-service">Terms of Service</a></li>
+                <li class="animate up animate-delay-2"><a href="">About</a></li>
+                <li class="animate up animate-delay-3"><a href="../contact">Contact</a></li>
+                <li class="animate up animate-delay-4"><a href="../privacy-policy">Privacy Policy</a></li>
+                <li class="animate up animate-delay-5"><a href="../terms-of-service/">Terms of Service</a></li>
             </ul>
         </div>
     </footer>
+
+<script>
+(function(){
+  // Respect reduced motion: if user prefers reduced motion, reveal all immediately.
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const elems = Array.from(document.querySelectorAll('.animate'));
+
+  if (prefersReduced) {
+    elems.forEach(el => el.classList.add('in-view'));
+    return;
+  }
+
+  const io = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Add the class that triggers CSS animations
+        entry.target.classList.add('in-view');
+        // Stop observing once revealed
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.12
+  });
+
+  elems.forEach(el => io.observe(el));
+})();
+</script>
 
 </body>
 </html>

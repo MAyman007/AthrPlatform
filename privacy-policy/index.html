@@ -57,7 +57,7 @@
         <div class="container">
             <nav class="navbar">
                 <a href="/" class="logo-link">
-                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo"></div>
+                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo animate up animate-delay-1"></div>
                 </a>
             </nav>
         </div>
@@ -66,34 +66,62 @@
     <main>
         <section id="privacy-policy" class="features">
             <div class="container" style="text-align: left; max-width: 800px;">
-                <h2>Privacy Policy</h2>
+                <h2 class="animate up animate-delay-1">Privacy Policy</h2>
                 
-                <h3>Introduction</h3>
-                <p>This Privacy Policy describes how Athr collects, uses, and protects your personal information when you use our services. We are committed to ensuring that your privacy is protected.</p>
+                <h3 class="animate up animate-delay-2">Introduction</h3>
+                <p class="animate up animate-delay-2">This Privacy Policy describes how Athr collects, uses, and protects your personal information when you use our services. We are committed to ensuring that your privacy is protected.</p>
 
-                <h3>Data Collection</h3>
-                <p>We may collect the following information: your name, contact information including email address, and other information relevant to customer surveys and/or offers. We also collect data related to your organization's assets for the purpose of providing our threat intelligence services.</p>
+                <h3 class="animate up animate-delay-3">Data Collection</h3>
+                <p class="animate up animate-delay-3">We may collect the following information: your name, contact information including email address, and other information relevant to customer surveys and/or offers. We also collect data related to your organization's assets for the purpose of providing our threat intelligence services.</p>
 
-                <h3>How We Use Information</h3>
-                <p>We require this information to understand your needs and provide you with a better service, and in particular for the following reasons: internal record keeping, improving our products and services, and periodically sending promotional emails about new products, special offers or other information which we think you may find interesting using the email address which you have provided.</p>
+                <h3 class="animate up animate-delay-4">How We Use Information</h3>
+                <p class="animate up animate-delay-4">We require this information to understand your needs and provide you with a better service, and in particular for the following reasons: internal record keeping, improving our products and services, and periodically sending promotional emails about new products, special offers or other information which we think you may find interesting using the email address which you have provided.</p>
 
-                <h3>User Rights</h3>
-                <p>You have the right to access, correct, or delete your personal information. You may also object to the processing of your personal data. To exercise these rights, please contact us at the email address provided on our contact page.</p>
+                <h3 class="animate up animate-delay-5">User Rights</h3>
+                <p class="animate up animate-delay-5">You have the right to access, correct, or delete your personal information. You may also object to the processing of your personal data. To exercise these rights, please contact us at the email address provided on our contact page.</p>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container">
-            <p class="copyright">&copy; 2025 Athr Intelligence. All rights reserved.</p>
+            <p class="copyright animate fade animate-delay-1">&copy; 2025 Athr Intelligence. All rights reserved.</p>
             <ul class="footer-links">
-                <li><a href="../about">About</a></li>
-                <li><a href="../contact">Contact</a></li>
-                <li><a href="">Privacy Policy</a></li>
-                <li><a href="../terms-of-service">Terms of Service</a></li>
+                <li class="animate up animate-delay-2"><a href="../about">About</a></li>
+                <li class="animate up animate-delay-3"><a href="../contact">Contact</a></li>
+                <li class="animate up animate-delay-4"><a href="">Privacy Policy</a></li>
+                <li class="animate up animate-delay-5"><a href="../terms-of-service">Terms of Service</a></li>
             </ul>
         </div>
     </footer>
+
+<script>
+(function(){
+  // Respect reduced motion: if user prefers reduced motion, reveal all immediately.
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const elems = Array.from(document.querySelectorAll('.animate'));
+
+  if (prefersReduced) {
+    elems.forEach(el => el.classList.add('in-view'));
+    return;
+  }
+
+  const io = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Add the class that triggers CSS animations
+        entry.target.classList.add('in-view');
+        // Stop observing once revealed
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.12
+  });
+
+  elems.forEach(el => io.observe(el));
+})();
+</script>
 
 </body>
 </html>

@@ -56,8 +56,8 @@
             width: 100%;
             padding: 0.8rem;
             border-radius: 4px;
-            border: 1px solid var(--bg-primary);
-            background-color: var(--bg-primary);
+            border: 1px solid #3a3a52;
+            background-color: #13475f;
             color: var(--text-primary);
             font-family: var(--font-sans);
         }
@@ -89,7 +89,7 @@
         <div class="container">
             <nav class="navbar">
                 <a href="/" class="logo-link">
-                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo"></div>
+                    <div class="logo"><img src="../assets/athr_logo.png" alt="Athr Logo" class="logo animate up animate-delay-1"></div>
                 </a>
             </nav>
         </div>
@@ -99,10 +99,10 @@
         <section id="contact-page" class="features">
             <div class="container">
                 <div style="text-align: center;">
-                    <h2>Contact Us</h2>
-                    <p>Have a question or want a demo? Fill out the form below.</p>
+                    <h2 class="animate up animate-delay-1">Contact Us</h2>
+                    <p class="animate up animate-delay-2">Have a question or want a demo? Fill out the form below.</p>
                 </div>
-                <div class="contact-form">
+                <div class="contact-form animate up animate-delay-3">
                     <form>
                         <div class="form-group">
                             <label for="name">Name</label>
@@ -116,7 +116,7 @@
                             <label for="message">Message</label>
                             <textarea id="message" name="message" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Send</button>
+                        <button type="submit" class="btn btn-primary animate fade animate-delay-4">Send</button>
                     </form>
                 </div>
             </div>
@@ -125,15 +125,43 @@
 
     <footer class="site-footer">
         <div class="container">
-            <p class="copyright">&copy; 2025 Athr Intelligence. All rights reserved.</p>
+            <p class="copyright animate fade animate-delay-1">&copy; 2025 Athr Intelligence. All rights reserved.</p>
             <ul class="footer-links">
-                <li><a href="../about">About</a></li>
-                <li><a href="">Contact</a></li>
-                <li><a href="../privacy-policy">Privacy Policy</a></li>
-                <li><a href="../terms-of-service">Terms of Service</a></li>
+                <li class="animate up animate-delay-2"><a href="../about">About</a></li>
+                <li class="animate up animate-delay-3"><a href="">Contact</a></li>
+                <li class="animate up animate-delay-4"><a href="../privacy-policy">Privacy Policy</a></li>
+                <li class="animate up animate-delay-5"><a href="../terms-of-service">Terms of Service</a></li>
             </ul>
         </div>
     </footer>
+
+<script>
+(function(){
+  // Respect reduced motion: if user prefers reduced motion, reveal all immediately.
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const elems = Array.from(document.querySelectorAll('.animate'));
+
+  if (prefersReduced) {
+    elems.forEach(el => el.classList.add('in-view'));
+    return;
+  }
+
+  const io = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        // Add the class that triggers CSS animations
+        entry.target.classList.add('in-view');
+        // Stop observing once revealed
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.12
+  });
+
+  elems.forEach(el => io.observe(el));
+})();
+</script>
 
 </body>
 </html>

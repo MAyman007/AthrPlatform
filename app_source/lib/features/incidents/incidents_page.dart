@@ -226,7 +226,6 @@ class _IncidentsViewState extends State<_IncidentsView> {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text('Filter & Search Incidents', style: textTheme.titleLarge),
                 const SizedBox(height: 16),

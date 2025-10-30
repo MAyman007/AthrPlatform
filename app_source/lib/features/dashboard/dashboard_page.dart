@@ -16,17 +16,13 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<DashboardViewModel>();
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 75,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
-              onTap: () => viewModel.launchURL('/', inApp: true),
-              child: Image.asset('assets/athr_logo.png', height: 50),
-            ),
+            Image.asset('assets/athr_logo.png', height: 50),
             const SizedBox(width: 16),
             Text(
               'Dashboard',
@@ -198,7 +194,12 @@ class DashboardPage extends StatelessWidget {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: _buildCategoryChart(viewModel)),
+                                Expanded(
+                                  child: _buildCategoryChart(
+                                    context,
+                                    viewModel,
+                                  ),
+                                ),
                                 const SizedBox(width: 24),
                                 Expanded(
                                   child: _buildSourceChart(context, viewModel),
@@ -232,7 +233,7 @@ class DashboardPage extends StatelessWidget {
                             const SizedBox(height: 24),
                             _buildDateChart(context, viewModel),
                             const SizedBox(height: 24),
-                            _buildCategoryChart(viewModel),
+                            _buildCategoryChart(context, viewModel),
                             const SizedBox(height: 24),
                             _buildSourceChart(context, viewModel),
                             const SizedBox(height: 24),
@@ -278,13 +279,24 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryChart(DashboardViewModel viewModel) {
+  Widget _buildCategoryChart(
+    BuildContext context,
+    DashboardViewModel viewModel,
+  ) {
     return _ChartSection(
       title: 'Incidents by Category',
       child: SizedBox(
         height: 250,
         width: double.infinity,
-        child: _CategoryBarChart(viewModel: viewModel),
+        child: _VerticalBarChart(
+          data: viewModel.incidentsByCategory,
+          color: Theme.of(context).primaryColor,
+          title: 'Categories',
+          maxItems: null,
+          baseOffset: 1.0,
+          touchedOffset: 1.6,
+          useGradient: true,
+        ),
       ),
     );
   }
@@ -584,161 +596,74 @@ class _SeverityPieChartState extends State<_SeverityPieChart> {
   }
 }
 
-/// A bar chart that displays the distribution of incidents by category.
-class _CategoryBarChart extends StatelessWidget {
-  final DashboardViewModel viewModel;
-
-  const _CategoryBarChart({required this.viewModel});
-
-  @override
-  Widget build(BuildContext context) {
-    final categoryEntries = viewModel.incidentsByCategory.entries.toList();
-
-    if (categoryEntries.isEmpty) {
-      return const Center(child: Text('No category data available.'));
-    }
-
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
-        maxY:
-            (categoryEntries
-                .map((e) => e.value)
-                .reduce((a, b) => a > b ? a : b)
-                .toDouble() +
-            3),
-        barTouchData: BarTouchData(
-          enabled: true,
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (group) => Colors.blueGrey,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final categoryName = categoryEntries[groupIndex].key;
-              final rodValue = (rod.toY - 1).toInt();
-              return BarTooltipItem(
-                '$categoryName\n',
-                const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                children: <TextSpan>[
-                  TextSpan(
-                    text: '$rodValue incident${rodValue == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                      color: Colors.yellow,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (double value, TitleMeta meta) {
-                final index = value.toInt();
-                if (index >= 0 && index < categoryEntries.length) {
-                  return SideTitleWidget(
-                    meta: meta,
-                    space: 8.0,
-                    // angle: -0.7, // Rotate labels for better fit
-                    child: Text(
-                      categoryEntries[index].key,
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                  );
-                }
-                return Container();
-              },
-              reservedSize: 60, // Increased size for rotated labels
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (double value, TitleMeta meta) {
-                // Don't show 0 or the top-most value which is for padding.
-                if (value == 0 || value == meta.max) {
-                  return Container();
-                }
-                // The bar values are offset by 1, so we subtract 1 here for the label.
-                return Text(
-                  (value - 1).toInt().toString(),
-                  style: const TextStyle(fontSize: 10),
-                  textAlign: TextAlign.left,
-                );
-              },
-            ),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        barGroups: categoryEntries.asMap().entries.map((entry) {
-          final index = entry.key;
-          final data = entry.value;
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: data.value.toDouble() + 1,
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).primaryColor.withOpacity(0.7),
-                    Theme.of(context).primaryColor,
-                  ],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
-                width: 16,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-/// A reusable vertical bar chart widget.
-class _VerticalBarChart extends StatelessWidget {
+/// A reusable vertical bar chart widget with hover/touch animations for Sources, Countries, Usernames and Categories.
+class _VerticalBarChart extends StatefulWidget {
   final Map<String, int> data;
   final Color color;
   final String title;
+  final int? maxItems; // null means show all items in insertion order
+  final double
+  baseOffset; // base vertical offset added to every bar (used by category chart)
+  final double
+  touchedOffset; // additional offset applied when bar is touched/hovered
+  final bool useGradient; // whether to draw a gradient like the category chart
 
   const _VerticalBarChart({
     required this.data,
     required this.color,
     required this.title,
+    this.maxItems = 10,
+    this.baseOffset = 0.0,
+    this.touchedOffset = 0.0,
+    this.useGradient = false,
   });
 
   @override
+  State<_VerticalBarChart> createState() => _VerticalBarChartState();
+}
+
+class _VerticalBarChartState extends State<_VerticalBarChart> {
+  int? _touchedIndex;
+
+  void _onTouch(FlTouchEvent event, BarTouchResponse? response) {
+    setState(() {
+      if (!event.isInterestedForInteractions ||
+          response == null ||
+          response.spot == null) {
+        _touchedIndex = null;
+      } else {
+        _touchedIndex = response.spot!.touchedBarGroupIndex;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return Center(child: Text('No data available for $title.'));
+    if (widget.data.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
     }
 
-    // Sort data to show the highest values and take top 10
-    final sortedEntries = data.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final topEntries = sortedEntries.take(10).toList();
+    // Determine entries:
+    // - If maxItems == null -> keep original insertion order and show all (used for categories)
+    // - Otherwise sort descending and take top N
+    final List<MapEntry<String, int>> entries = widget.maxItems == null
+        ? widget.data.entries.toList()
+        : (widget.data.entries.toList()
+                ..sort((a, b) => b.value.compareTo(a.value)))
+              .take(widget.maxItems!)
+              .toList();
 
-    final double maxY =
-        topEntries.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
+    if (entries.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    // Compute maxY based on mode
+    final int maxValue = entries
+        .map((e) => e.value)
+        .reduce((a, b) => a > b ? a : b);
+    final double maxY = widget.baseOffset > 0
+        ? (maxValue.toDouble() + 3) // category-style padding
+        : (maxValue.toDouble() * 1.2);
 
     return BarChart(
       BarChartData(
@@ -746,10 +671,14 @@ class _VerticalBarChart extends StatelessWidget {
         maxY: maxY,
         barTouchData: BarTouchData(
           enabled: true,
+          touchCallback: _onTouch,
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => Colors.blueGrey,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final entry = topEntries[groupIndex];
+              final entry = entries[groupIndex];
+              final displayedValue = (rod.toY - widget.baseOffset)
+                  .round()
+                  .clamp(0, 1 << 30);
               return BarTooltipItem(
                 '${entry.key}\n',
                 const TextStyle(
@@ -760,7 +689,7 @@ class _VerticalBarChart extends StatelessWidget {
                 children: <TextSpan>[
                   TextSpan(
                     text:
-                        '${entry.value} incident${entry.value == 1 ? '' : 's'}',
+                        '$displayedValue incident${displayedValue == 1 ? '' : 's'}',
                     style: const TextStyle(
                       color: Colors.yellow,
                       fontSize: 12,
@@ -779,26 +708,44 @@ class _VerticalBarChart extends StatelessWidget {
               showTitles: true,
               getTitlesWidget: (double value, TitleMeta meta) {
                 final index = value.toInt();
-                if (index >= 0 && index < topEntries.length) {
+                if (index >= 0 && index < entries.length) {
                   return SideTitleWidget(
                     meta: meta,
                     space: 8.0,
-                    // angle: -0.7, // Rotate labels for better fit
                     child: Text(
-                      topEntries[index].key,
+                      entries[index].key,
                       style: const TextStyle(fontSize: 10),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: widget.maxItems == null
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
                     ),
                   );
                 }
                 return Container();
               },
-              reservedSize: 60, // Increased size for rotated labels
+              reservedSize: 60,
             ),
           ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-          ),
+          leftTitles: widget.baseOffset > 0
+              ? AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      if (value == 0 || value == meta.max) {
+                        return Container();
+                      }
+                      return Text(
+                        (value - widget.baseOffset).toInt().toString(),
+                        style: const TextStyle(fontSize: 10),
+                        textAlign: TextAlign.left,
+                      );
+                    },
+                  ),
+                )
+              : const AxisTitles(
+                  sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+                ),
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
@@ -807,25 +754,49 @@ class _VerticalBarChart extends StatelessWidget {
           ),
         ),
         borderData: FlBorderData(show: false),
-        barGroups: topEntries.asMap().entries.map((entry) {
+        barGroups: entries.asMap().entries.map((entry) {
           final index = entry.key;
           final data = entry.value;
-          return BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: data.value.toDouble(),
-                color: color,
-                width: 16,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(4),
-                ),
-              ),
-            ],
-          );
+          final isTouched = _touchedIndex == index;
+          final baseWidth = 16.0;
+          final width = isTouched ? baseWidth + 8 : baseWidth;
+          final double toY =
+              data.value.toDouble() +
+              (isTouched ? widget.touchedOffset : widget.baseOffset);
+
+          final rod = widget.useGradient
+              ? BarChartRodData(
+                  toY: toY,
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.color.withOpacity(isTouched ? 0.95 : 0.72),
+                      widget.color.withOpacity(1.0),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                  width: width,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(6),
+                    topRight: Radius.circular(6),
+                  ),
+                )
+              : BarChartRodData(
+                  toY: toY,
+                  color: isTouched
+                      ? widget.color.withOpacity(0.95)
+                      : widget.color,
+                  width: width,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(6),
+                    topRight: Radius.circular(6),
+                  ),
+                );
+
+          return BarChartGroupData(x: index, barRods: [rod]);
         }).toList(),
       ),
+      duration: const Duration(milliseconds: 120),
     );
   }
 }

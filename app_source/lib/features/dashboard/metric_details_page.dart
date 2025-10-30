@@ -418,6 +418,34 @@ class _DefaultIncidentCardState extends State<_DefaultIncidentCard> {
                     ),
                   ],
                 ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: _isExpanded
+                        ? Padding(
+                            padding: const EdgeInsets.only(
+                              top: 8.0,
+                              left: 16.0,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'SHA256 Hash',
+                                  incident.hashSha256,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Source Path',
+                                  incident.sourcePath,
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
                 TextButton.icon(
                   icon: const Icon(Icons.recommend_outlined),
                   label: const Text('Recommended Actions'),
@@ -427,42 +455,18 @@ class _DefaultIncidentCardState extends State<_DefaultIncidentCard> {
                     );
                   },
                 ),
-              ],
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: Container(
-                width: double.infinity,
-                child: _isExpanded
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0, left: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'SHA256 Hash',
-                              incident.hashSha256,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Source Path',
-                              incident.sourcePath,
-                            ),
-                          ],
+                _showRecommendations
+                    ? AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: _RecommendedActionsSection(
+                          incident: widget.incident,
+                          metricId: widget.metricId,
                         ),
                       )
                     : const SizedBox.shrink(),
-              ),
+              ],
             ),
-            if (_showRecommendations)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: _RecommendedActionsSection(
-                  incident: widget.incident,
-                  metricId: widget.metricId,
-                ),
-              ),
           ],
         ),
       ),
@@ -573,6 +577,58 @@ class _CompromisedMachineCardState extends State<_CompromisedMachineCard> {
                     label: const Text('Details'),
                     onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: Container(
+                    width: double.infinity,
+                    child: _isExpanded && log != null
+                        ? Padding(
+                            padding: const EdgeInsets.only(
+                              top: 8.0,
+                              left: 16.0,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'IP Address',
+                                  log.machineIp,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Username',
+                                  log.machineUsername,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Country',
+                                  log.machineCountry,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Location',
+                                  log.machineLocations,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Malware Path',
+                                  log.malwarePath,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'HWID',
+                                  log.machineHwid,
+                                ),
+                                _MetricDetailsPageState._buildDialogDetailRow(
+                                  'Malware Install Date',
+                                  log.malwareInstallDate != null
+                                      ? DateFormat.yMMMd().format(
+                                          log.malwareInstallDate!,
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
                 TextButton.icon(
                   icon: const Icon(Icons.recommend_outlined),
                   label: const Text('Recommended Actions'),
@@ -584,64 +640,16 @@ class _CompromisedMachineCardState extends State<_CompromisedMachineCard> {
                 ),
               ],
             ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: Container(
-                width: double.infinity,
-                child: _isExpanded && log != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0, left: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'IP Address',
-                              log.machineIp,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Username',
-                              log.machineUsername,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Country',
-                              log.machineCountry,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Location',
-                              log.machineLocations,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Malware Path',
-                              log.malwarePath,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'HWID',
-                              log.machineHwid,
-                            ),
-                            _MetricDetailsPageState._buildDialogDetailRow(
-                              'Malware Install Date',
-                              log.malwareInstallDate != null
-                                  ? DateFormat.yMMMd().format(
-                                      log.malwareInstallDate!,
-                                    )
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ),
-            if (_showRecommendations)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: _RecommendedActionsSection(
-                  incident: widget.incident,
-                  metricId: 'compromised-machines',
-                ),
-              ),
+            _showRecommendations
+                ? AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _RecommendedActionsSection(
+                      incident: widget.incident,
+                      metricId: 'compromised-machines',
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ],
         ),
       ),
