@@ -423,7 +423,7 @@ section {
 /* Generic animation helper (idle state) */
 .animate {
     opacity: 0;
-    /* transform: translateY(14px); */
+    transform: translateY(14px);
     will-change: opacity, transform;
 }
 
