@@ -12,7 +12,7 @@ class IncidentService {
   // Depend on the FirebaseService via the locator
   final FirebaseService _firebaseService = locator<FirebaseService>();
   final String _apiEndpoint =
-      'https://athr-dashboard.mohamedayman.org/search/domains';
+      'https://athr-dashboard.mohamedayman.net/search/domains';
 
   /// Fetches a list of incidents for the currently authenticated user's organization.
   ///
