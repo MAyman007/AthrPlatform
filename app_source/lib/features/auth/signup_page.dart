@@ -47,7 +47,8 @@ class _SignupView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             GestureDetector(
-              onTap: () => viewModel.launchURL('/', inApp: true),
+              onTap: () =>
+                  viewModel.launchURL('https://athr.pages.dev', inApp: true),
               child: Image.asset('assets/athr_logo.png', height: 50),
             ),
             const SizedBox(width: 16),
@@ -329,8 +330,9 @@ class _SignupView extends StatelessWidget {
                         // decoration: TextDecoration.underline,
                       ),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () =>
-                            viewModel.launchURL('../terms-of-service'),
+                        ..onTap = () => viewModel.launchURL(
+                          'https://athr.pages.dev/terms-of-service/',
+                        ),
                     ),
                     const TextSpan(text: ' and '),
                     TextSpan(
@@ -340,8 +342,9 @@ class _SignupView extends StatelessWidget {
                         // decoration: TextDecoration.underline,
                       ),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () =>
-                            viewModel.launchURL('../privacy-policy'),
+                        ..onTap = () => viewModel.launchURL(
+                          'https://athr.pages.dev/privacy-policy/',
+                        ),
                     ),
                     const TextSpan(text: '.'),
                   ],

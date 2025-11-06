@@ -44,7 +44,7 @@ class _LoginView extends StatelessWidget {
         toolbarHeight: 75,
         backgroundColor: Colors.transparent,
         title: GestureDetector(
-          onTap: () => viewModel.launchURL('/'),
+          onTap: () => viewModel.launchURL('https://athr.pages.dev'),
           child: Image.asset('assets/athr_logo.png', height: 50),
         ),
       ),
