@@ -25,7 +25,10 @@ class _SettingsView extends StatelessWidget {
     final viewModel = context.watch<SettingsViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      ),
       body: Builder(
         builder: (context) {
           if (viewModel.isLoading) {

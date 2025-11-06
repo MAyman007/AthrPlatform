@@ -255,11 +255,23 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _buildSeverityChart(DashboardViewModel viewModel) {
+    // Convert Map<IncidentSeverity, int> to Map<String, int> for donut chart
+    final severityData = <String, int>{};
+    viewModel.incidentsBySeverity.forEach((severity, count) {
+      final name =
+          '${severity.name[0].toUpperCase()}${severity.name.substring(1)}';
+      severityData[name] = count;
+    });
+
     return _ChartSection(
       title: 'Incidents by Severity',
       child: SizedBox(
-        height: 250,
-        child: _SeverityPieChart(viewModel: viewModel),
+        height: 300,
+        child: _SeverityDonutChart(
+          data: severityData,
+          severityMap: viewModel.incidentsBySeverity,
+          title: 'Severity',
+        ),
       ),
     );
   }
@@ -268,7 +280,7 @@ class DashboardPage extends StatelessWidget {
     return _ChartSection(
       title: 'Incidents Over Time',
       child: SizedBox(
-        height: 250,
+        height: 300,
         width: double.infinity,
         child: _DateLineChart(
           data: viewModel.incidentsByDate,
@@ -286,16 +298,11 @@ class DashboardPage extends StatelessWidget {
     return _ChartSection(
       title: 'Incidents by Category',
       child: SizedBox(
-        height: 250,
+        height: 300,
         width: double.infinity,
-        child: _VerticalBarChart(
+        child: _CategoryBarChart(
           data: viewModel.incidentsByCategory,
-          color: Theme.of(context).primaryColor,
           title: 'Categories',
-          maxItems: null,
-          baseOffset: 1.0,
-          touchedOffset: 1.6,
-          useGradient: true,
         ),
       ),
     );
@@ -305,13 +312,9 @@ class DashboardPage extends StatelessWidget {
     return _ChartSection(
       title: 'Top Leak Sources',
       child: SizedBox(
-        height: 250,
+        height: 300,
         width: double.infinity,
-        child: _VerticalBarChart(
-          data: viewModel.incidentsBySource,
-          color: Colors.teal,
-          title: 'Sources',
-        ),
+        child: _DonutChart(data: viewModel.incidentsBySource, title: 'Sources'),
       ),
     );
   }
@@ -323,7 +326,7 @@ class DashboardPage extends StatelessWidget {
     return _ChartSection(
       title: 'Compromised Assets by Country',
       child: SizedBox(
-        height: 250,
+        height: 300,
         width: double.infinity,
         child: _VerticalBarChart(
           data: viewModel.machinesByCountry,
@@ -341,7 +344,7 @@ class DashboardPage extends StatelessWidget {
     return _ChartSection(
       title: 'Top Affected User Accounts',
       child: SizedBox(
-        height: 250,
+        height: 300,
         width: double.infinity,
         child: _VerticalBarChart(
           data: viewModel.incidentsByUsername,
@@ -390,6 +393,248 @@ class _SeverityLegend extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+/// A donut chart for severity distribution using the severity colors.
+class _SeverityDonutChart extends StatefulWidget {
+  final Map<String, int> data;
+  final Map<IncidentSeverity, int> severityMap; // To get the actual colors
+  final String title;
+
+  const _SeverityDonutChart({
+    required this.data,
+    required this.severityMap,
+    required this.title,
+  });
+
+  @override
+  State<_SeverityDonutChart> createState() => _SeverityDonutChartState();
+}
+
+class _SeverityDonutChartState extends State<_SeverityDonutChart> {
+  int? _touchedIndex;
+  int? _lastTouchedIndex;
+  bool _isTooltipHovered = false;
+  Timer? _clearTimer;
+
+  void _scheduleClearLastIndex([int ms = 220]) {
+    _clearTimer?.cancel();
+    _clearTimer = Timer(Duration(milliseconds: ms), () {
+      if (!_isTooltipHovered && _touchedIndex == null) {
+        setState(() {
+          _lastTouchedIndex = null;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _clearTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.data.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    // Sort by severity (we'll use the original severityMap order)
+    final sortedEntries = widget.severityMap.entries.toList()
+      ..sort((a, b) => b.key.index.compareTo(a.key.index));
+
+    final displayIndex = _touchedIndex ?? _lastTouchedIndex;
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sections: sortedEntries.asMap().entries.map((mapEntry) {
+                    final index = mapEntry.key;
+                    final entry = mapEntry.value;
+                    final severity = entry.key;
+                    final count = entry.value;
+                    final isTouched =
+                        _touchedIndex == index ||
+                        (_touchedIndex == null &&
+                            _lastTouchedIndex == index &&
+                            _isTooltipHovered);
+
+                    return PieChartSectionData(
+                      gradient: LinearGradient(
+                        colors: [
+                          severity.color.withOpacity(0.7),
+                          severity.color,
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                      value: count.toDouble(),
+                      title: count.toString(),
+                      radius: isTouched ? 135 : 120,
+                      titleStyle: TextStyle(
+                        fontSize: isTouched ? 20 : 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: const [
+                          Shadow(color: Colors.black, blurRadius: 2),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 0, // Makes it a full pie chart
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _lastTouchedIndex =
+                              _lastTouchedIndex ?? _touchedIndex;
+                          _touchedIndex = null;
+                          if (!_isTooltipHovered) {
+                            _scheduleClearLastIndex();
+                          }
+                        } else {
+                          final idx = pieTouchResponse
+                              .touchedSection!
+                              .touchedSectionIndex;
+                          _touchedIndex = idx >= 0 ? idx : null;
+                          _lastTouchedIndex = _touchedIndex;
+                          _clearTimer?.cancel();
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ),
+              if ((displayIndex != null) &&
+                  displayIndex >= 0 &&
+                  displayIndex < sortedEntries.length)
+                Positioned(
+                  top: 16,
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      setState(() {
+                        _isTooltipHovered = true;
+                        _clearTimer?.cancel();
+                      });
+                    },
+                    onExit: (_) {
+                      setState(() {
+                        _isTooltipHovered = false;
+                      });
+                      _scheduleClearLastIndex();
+                    },
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: 1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _buildTooltip(sortedEntries[displayIndex]),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(flex: 1, child: _buildLegend(sortedEntries)),
+      ],
+    );
+  }
+
+  Widget _buildTooltip(MapEntry<IncidentSeverity, int> entry) {
+    final severity = entry.key;
+    final count = entry.value;
+    final name =
+        '${severity.name[0].toUpperCase()}${severity.name.substring(1)}';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: severity.color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '$count incident${count == 1 ? '' : 's'}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegend(List<MapEntry<IncidentSeverity, int>> entries) {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: entries.map((entry) {
+          final severity = entry.key;
+          final name =
+              '${severity.name[0].toUpperCase()}${severity.name.substring(1)}';
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: severity.color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -459,14 +704,7 @@ class _SeverityPieChartState extends State<_SeverityPieChart> {
                             _lastTouchedIndex == index &&
                             _isTooltipHovered);
                     return PieChartSectionData(
-                      gradient: LinearGradient(
-                        colors: [
-                          severity.color.withOpacity(0.7),
-                          severity.color,
-                        ],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
+                      color: severity.color,
                       value: count.toDouble(),
                       title: count.toString(),
                       radius: isTouched ? 105 : 90,
@@ -601,21 +839,11 @@ class _VerticalBarChart extends StatefulWidget {
   final Map<String, int> data;
   final Color color;
   final String title;
-  final int? maxItems; // null means show all items in insertion order
-  final double
-  baseOffset; // base vertical offset added to every bar (used by category chart)
-  final double
-  touchedOffset; // additional offset applied when bar is touched/hovered
-  final bool useGradient; // whether to draw a gradient like the category chart
 
   const _VerticalBarChart({
     required this.data,
     required this.color,
     required this.title,
-    this.maxItems = 10,
-    this.baseOffset = 0.0,
-    this.touchedOffset = 0.0,
-    this.useGradient = false,
   });
 
   @override
@@ -643,27 +871,21 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
       return Center(child: Text('No data available for ${widget.title}.'));
     }
 
-    // Determine entries:
-    // - If maxItems == null -> keep original insertion order and show all (used for categories)
-    // - Otherwise sort descending and take top N
-    final List<MapEntry<String, int>> entries = widget.maxItems == null
-        ? widget.data.entries.toList()
-        : (widget.data.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value)))
-              .take(widget.maxItems!)
-              .toList();
+    // Sort by value descending and take top 10
+    final entries =
+        (widget.data.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value)))
+            .take(10)
+            .toList();
 
     if (entries.isEmpty) {
       return Center(child: Text('No data available for ${widget.title}.'));
     }
 
-    // Compute maxY based on mode
     final int maxValue = entries
         .map((e) => e.value)
         .reduce((a, b) => a > b ? a : b);
-    final double maxY = widget.baseOffset > 0
-        ? (maxValue.toDouble() + 3) // category-style padding
-        : (maxValue.toDouble() * 1.2);
+    final double maxY = maxValue.toDouble() * 1.2;
 
     return BarChart(
       BarChartData(
@@ -676,9 +898,7 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
             getTooltipColor: (group) => Colors.blueGrey,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final entry = entries[groupIndex];
-              final displayedValue = (rod.toY - widget.baseOffset)
-                  .round()
-                  .clamp(0, 1 << 30);
+              final value = rod.toY.round();
               return BarTooltipItem(
                 '${entry.key}\n',
                 const TextStyle(
@@ -688,8 +908,7 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
                 ),
                 children: <TextSpan>[
                   TextSpan(
-                    text:
-                        '$displayedValue incident${displayedValue == 1 ? '' : 's'}',
+                    text: '$value incident${value == 1 ? '' : 's'}',
                     style: const TextStyle(
                       color: Colors.yellow,
                       fontSize: 12,
@@ -715,9 +934,7 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
                     child: Text(
                       entries[index].key,
                       style: const TextStyle(fontSize: 10),
-                      overflow: widget.maxItems == null
-                          ? TextOverflow.visible
-                          : TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   );
                 }
@@ -726,26 +943,9 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
               reservedSize: 60,
             ),
           ),
-          leftTitles: widget.baseOffset > 0
-              ? AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    getTitlesWidget: (double value, TitleMeta meta) {
-                      if (value == 0 || value == meta.max) {
-                        return Container();
-                      }
-                      return Text(
-                        (value - widget.baseOffset).toInt().toString(),
-                        style: const TextStyle(fontSize: 10),
-                        textAlign: TextAlign.left,
-                      );
-                    },
-                  ),
-                )
-              : const AxisTitles(
-                  sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: true, reservedSize: 40),
+          ),
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
@@ -760,40 +960,23 @@ class _VerticalBarChartState extends State<_VerticalBarChart> {
           final isTouched = _touchedIndex == index;
           final baseWidth = 16.0;
           final width = isTouched ? baseWidth + 8 : baseWidth;
-          final double toY =
-              data.value.toDouble() +
-              (isTouched ? widget.touchedOffset : widget.baseOffset);
 
-          final rod = widget.useGradient
-              ? BarChartRodData(
-                  toY: toY,
-                  gradient: LinearGradient(
-                    colors: [
-                      widget.color.withOpacity(isTouched ? 0.95 : 0.72),
-                      widget.color.withOpacity(1.0),
-                    ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                  width: width,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(6),
-                    topRight: Radius.circular(6),
-                  ),
-                )
-              : BarChartRodData(
-                  toY: toY,
-                  color: isTouched
-                      ? widget.color.withOpacity(0.95)
-                      : widget.color,
-                  width: width,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(6),
-                    topRight: Radius.circular(6),
-                  ),
-                );
-
-          return BarChartGroupData(x: index, barRods: [rod]);
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: data.value.toDouble(),
+                color: isTouched
+                    ? widget.color.withOpacity(0.95)
+                    : widget.color,
+                width: width,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(6),
+                  topRight: Radius.circular(6),
+                ),
+              ),
+            ],
+          );
         }).toList(),
       ),
       duration: const Duration(milliseconds: 120),
@@ -1253,32 +1436,784 @@ class _DateLineChartState extends State<_DateLineChart>
 //   }
 // }
 
+/// A donut/ring chart widget for displaying data distribution.
+class _DonutChart extends StatefulWidget {
+  final Map<String, int> data;
+  final String title;
+
+  const _DonutChart({required this.data, required this.title});
+
+  @override
+  State<_DonutChart> createState() => _DonutChartState();
+}
+
+class _DonutChartState extends State<_DonutChart> {
+  int? _touchedIndex;
+  int? _lastTouchedIndex;
+  bool _isTooltipHovered = false;
+  Timer? _clearTimer;
+
+  // Predefined color palette for sources
+  static const List<Color> _colorPalette = [
+    Color(0xFF009688), // Teal
+    Color(0xFF00BCD4), // Cyan
+    Color(0xFF03A9F4), // Light Blue
+    Color(0xFF2196F3), // Blue
+    Color(0xFF3F51B5), // Indigo
+    Color(0xFF673AB7), // Deep Purple
+    Color(0xFF9C27B0), // Purple
+    Color(0xFFE91E63), // Pink
+    Color(0xFFF44336), // Red
+    Color(0xFFFF5722), // Deep Orange
+  ];
+
+  void _scheduleClearLastIndex([int ms = 220]) {
+    _clearTimer?.cancel();
+    _clearTimer = Timer(Duration(milliseconds: ms), () {
+      if (!_isTooltipHovered && _touchedIndex == null) {
+        setState(() {
+          _lastTouchedIndex = null;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _clearTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.data.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    // Sort and take top 10 sources
+    final sortedEntries = widget.data.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topEntries = sortedEntries.take(10).toList();
+
+    final displayIndex = _touchedIndex ?? _lastTouchedIndex;
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sections: topEntries.asMap().entries.map((mapEntry) {
+                    final index = mapEntry.key;
+                    final entry = mapEntry.value;
+                    final count = entry.value;
+                    final color = _colorPalette[index % _colorPalette.length];
+                    final isTouched =
+                        _touchedIndex == index ||
+                        (_touchedIndex == null &&
+                            _lastTouchedIndex == index &&
+                            _isTooltipHovered);
+
+                    return PieChartSectionData(
+                      gradient: LinearGradient(
+                        colors: [color.withOpacity(0.7), color],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                      value: count.toDouble(),
+                      title: count.toString(),
+                      radius: isTouched ? 80 : 65,
+                      titleStyle: TextStyle(
+                        fontSize: isTouched ? 16 : 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: const [
+                          Shadow(color: Colors.black, blurRadius: 2),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 60, // Makes it a donut/ring
+                  pieTouchData: PieTouchData(
+                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                      setState(() {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _lastTouchedIndex =
+                              _lastTouchedIndex ?? _touchedIndex;
+                          _touchedIndex = null;
+                          if (!_isTooltipHovered) {
+                            _scheduleClearLastIndex();
+                          }
+                        } else {
+                          final idx = pieTouchResponse
+                              .touchedSection!
+                              .touchedSectionIndex;
+                          _touchedIndex = idx >= 0 ? idx : null;
+                          _lastTouchedIndex = _touchedIndex;
+                          _clearTimer?.cancel();
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ),
+              // Center text
+              Text(
+                'Top ${topEntries.length}\nSources',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if ((displayIndex != null) &&
+                  displayIndex >= 0 &&
+                  displayIndex < topEntries.length)
+                Positioned(
+                  top: 16,
+                  child: MouseRegion(
+                    onEnter: (_) {
+                      setState(() {
+                        _isTooltipHovered = true;
+                        _clearTimer?.cancel();
+                      });
+                    },
+                    onExit: (_) {
+                      setState(() {
+                        _isTooltipHovered = false;
+                      });
+                      _scheduleClearLastIndex();
+                    },
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: 1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _buildTooltip(
+                          topEntries[displayIndex],
+                          _colorPalette[displayIndex % _colorPalette.length],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(flex: 1, child: _buildLegend(topEntries)),
+      ],
+    );
+  }
+
+  Widget _buildTooltip(MapEntry<String, int> entry, Color color) {
+    final count = entry.value;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.key,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '$count incident${count == 1 ? '' : 's'}',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegend(List<MapEntry<String, int>> entries) {
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: entries.asMap().entries.map((mapEntry) {
+          final index = mapEntry.key;
+          final entry = mapEntry.value;
+          final color = _colorPalette[index % _colorPalette.length];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    entry.key,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+/// A modern category bar chart with vibrant colors and animations.
+class _CategoryBarChart extends StatefulWidget {
+  final Map<String, int> data;
+  final String title;
+
+  const _CategoryBarChart({required this.data, required this.title});
+
+  @override
+  State<_CategoryBarChart> createState() => _CategoryBarChartState();
+}
+
+class _CategoryBarChartState extends State<_CategoryBarChart> {
+  int? _touchedIndex;
+
+  // Color palette for categories
+  static const List<Color> _categoryColors = [
+    Color(0xFF6366F1), // Indigo
+    Color(0xFFEC4899), // Pink
+    Color(0xFF8B5CF6), // Purple
+    Color(0xFF10B981), // Green
+    Color(0xFFF59E0B), // Amber
+    Color(0xFF3B82F6), // Blue
+    Color(0xFFEF4444), // Red
+    Color(0xFF14B8A6), // Teal
+    Color(0xFFF97316), // Orange
+    Color(0xFF06B6D4), // Cyan
+  ];
+
+  void _onTouch(FlTouchEvent event, BarTouchResponse? response) {
+    setState(() {
+      if (!event.isInterestedForInteractions ||
+          response == null ||
+          response.spot == null) {
+        _touchedIndex = null;
+      } else {
+        _touchedIndex = response.spot!.touchedBarGroupIndex;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.data.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    // Process entries: combine the least two categories into "Other"
+    final sortedEntries = widget.data.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    List<MapEntry<String, int>> entries;
+
+    if (sortedEntries.length > 2) {
+      // Take all but the last 2, then add "Other" with the sum of the last 2
+      final mainCategories = sortedEntries.sublist(0, sortedEntries.length - 2);
+      final lastTwo = sortedEntries.sublist(sortedEntries.length - 2);
+      final otherSum = lastTwo.fold<int>(0, (sum, entry) => sum + entry.value);
+
+      entries = [...mainCategories, MapEntry('Other', otherSum)];
+    } else {
+      entries = sortedEntries;
+    }
+
+    if (entries.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    final int maxValue = entries
+        .map((e) => e.value)
+        .reduce((a, b) => a > b ? a : b);
+    final double maxY = maxValue.toDouble() * 1.15;
+
+    return Row(
+      children: [
+        // Bar chart
+        Expanded(
+          flex: 3,
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxY,
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchCallback: _onTouch,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (group) => Colors.black.withOpacity(0.85),
+                  tooltipPadding: const EdgeInsets.all(8),
+                  tooltipMargin: 8,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final entry = entries[groupIndex];
+                    return BarTooltipItem(
+                      '${entry.key}\n',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text:
+                              '${entry.value} incident${entry.value == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color:
+                                _categoryColors[groupIndex %
+                                        _categoryColors.length]
+                                    .withOpacity(0.9),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (double value, TitleMeta meta) {
+                      final index = value.toInt();
+                      if (index >= 0 && index < entries.length) {
+                        final isTouched = _touchedIndex == index;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            entries[index].key,
+                            style: TextStyle(
+                              fontSize: isTouched ? 12 : 11,
+                              fontWeight: isTouched
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isTouched
+                                  ? _categoryColors[index %
+                                        _categoryColors.length]
+                                  : Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      return Container();
+                    },
+                    reservedSize: 50,
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 45,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toInt().toString(),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                      );
+                    },
+                  ),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: maxY / 5,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: Colors.grey.withOpacity(0.15),
+                    strokeWidth: 1,
+                  );
+                },
+              ),
+              barGroups: entries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final data = entry.value;
+                final isTouched = _touchedIndex == index;
+                final baseWidth = 32.0;
+                final width = isTouched ? baseWidth + 8 : baseWidth;
+                final color = _categoryColors[index % _categoryColors.length];
+
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: data.value.toDouble(),
+                      gradient: LinearGradient(
+                        colors: [
+                          color.withOpacity(0.7),
+                          color,
+                          color.withOpacity(0.95),
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                      width: width,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isTouched ? 10 : 8),
+                        topRight: Radius.circular(isTouched ? 10 : 8),
+                      ),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: maxY,
+                        color: Colors.grey.withOpacity(0.08),
+                      ),
+                    ),
+                  ],
+                  showingTooltipIndicators: isTouched ? [0] : [],
+                );
+              }).toList(),
+            ),
+            swapAnimationDuration: const Duration(milliseconds: 200),
+            swapAnimationCurve: Curves.easeOutCubic,
+          ),
+        ),
+        // Legend
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 1,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: entries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final data = entry.value;
+                final color = _categoryColors[index % _categoryColors.length];
+                final isTouched = _touchedIndex == index;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isTouched
+                          ? color.withOpacity(0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isTouched
+                            ? color.withOpacity(0.3)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [color.withOpacity(0.7), color],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(3),
+                            boxShadow: isTouched
+                                ? [
+                                    BoxShadow(
+                                      color: color.withOpacity(0.4),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data.key,
+                                style: TextStyle(
+                                  fontSize: isTouched ? 12 : 11,
+                                  fontWeight: isTouched
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: isTouched ? color : Colors.grey[700],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${data.value}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A horizontal bar chart widget with hover animations.
+class _HorizontalBarChart extends StatefulWidget {
+  final Map<String, int> data;
+  final Color color;
+  final String title;
+
+  const _HorizontalBarChart({
+    required this.data,
+    required this.color,
+    required this.title,
+  });
+
+  @override
+  State<_HorizontalBarChart> createState() => _HorizontalBarChartState();
+}
+
+class _HorizontalBarChartState extends State<_HorizontalBarChart> {
+  int? _touchedIndex;
+
+  void _onTouch(FlTouchEvent event, BarTouchResponse? response) {
+    setState(() {
+      if (!event.isInterestedForInteractions ||
+          response == null ||
+          response.spot == null) {
+        _touchedIndex = null;
+      } else {
+        _touchedIndex = response.spot!.touchedBarGroupIndex;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.data.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    // Keep original insertion order and show all categories
+    final entries = widget.data.entries.toList();
+
+    if (entries.isEmpty) {
+      return Center(child: Text('No data available for ${widget.title}.'));
+    }
+
+    final int maxValue = entries
+        .map((e) => e.value)
+        .reduce((a, b) => a > b ? a : b);
+    final double maxX = maxValue.toDouble() * 1.15;
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxX,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchCallback: _onTouch,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (group) => Colors.blueGrey.withOpacity(0.9),
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              final entry = entries[groupIndex];
+              return BarTooltipItem(
+                '${entry.key}\n',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                children: <TextSpan>[
+                  TextSpan(
+                    text:
+                        '${entry.value} incident${entry.value == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                      color: Colors.yellow,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (double value, TitleMeta meta) {
+                final index = value.toInt();
+                if (index >= 0 && index < entries.length) {
+                  return SideTitleWidget(
+                    meta: meta,
+                    space: 8.0,
+                    child: Text(
+                      entries[index].key,
+                      style: const TextStyle(fontSize: 11),
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                }
+                return Container();
+              },
+              reservedSize: 120,
+            ),
+          ),
+          bottomTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: true, reservedSize: 30),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: entries.asMap().entries.map((entry) {
+          final index = entry.key;
+          final data = entry.value;
+          final isTouched = _touchedIndex == index;
+          final baseWidth = 18.0;
+          final width = isTouched ? baseWidth + 6 : baseWidth;
+
+          return BarChartGroupData(
+            x: index,
+            barRods: [
+              BarChartRodData(
+                toY: data.value.toDouble(),
+                gradient: LinearGradient(
+                  colors: [
+                    widget.color.withOpacity(isTouched ? 0.95 : 0.72),
+                    widget.color.withOpacity(1.0),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                width: width,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(6),
+                  bottomRight: Radius.circular(6),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+        gridData: const FlGridData(
+          show: true,
+          drawVerticalLine: true,
+          drawHorizontalLine: false,
+        ),
+      ),
+      swapAnimationDuration: const Duration(milliseconds: 120),
+    );
+  }
+}
+
 /// A styled container for a chart with a title.
-class _ChartSection extends StatelessWidget {
+class _ChartSection extends StatefulWidget {
   final String title;
   final Widget child;
 
   const _ChartSection({required this.title, required this.child});
 
   @override
+  State<_ChartSection> createState() => _ChartSectionState();
+}
+
+class _ChartSectionState extends State<_ChartSection> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, _isHovered ? -4 : 0, 0),
+        child: Card(
+          elevation: _isHovered ? 8 : 2,
+          shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isHovered
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                    : Colors.transparent,
+                width: 1,
+              ),
             ),
-            const SizedBox(height: 24),
-            child,
-          ],
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  widget.child,
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

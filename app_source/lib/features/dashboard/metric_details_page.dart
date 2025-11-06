@@ -140,6 +140,7 @@ class _MetricDetailsPageState extends State<MetricDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Text(_getTitle()),
         actions: [
           PopupMenuButton<SortBy>(

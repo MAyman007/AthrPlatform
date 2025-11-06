@@ -206,7 +206,10 @@ class _IncidentsViewState extends State<_IncidentsView> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Incident Management')),
+      appBar: AppBar(
+        title: const Text('Incident Management'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      ),
       body: Builder(
         builder: (context) {
           if (viewModel.isLoading) {

@@ -28,7 +28,10 @@ class _AlertsView extends StatelessWidget {
     final viewModel = context.watch<AlertsViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New Alerts')),
+      appBar: AppBar(
+        title: const Text('New Alerts'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      ),
       body: Builder(
         builder: (context) {
           if (viewModel.isLoading) {
