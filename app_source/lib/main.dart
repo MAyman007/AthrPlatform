@@ -14,7 +14,8 @@ import 'features/auth/signup_page.dart';
 import 'features/alerts/alerts_page.dart';
 import 'features/dashboard/dashboard_page.dart';
 import 'features/incidents/incidents_page.dart';
-import 'features/admin/admin_page.dart';
+import 'features/admin/pages/admin_login_page.dart';
+import 'features/admin/pages/admin_dashboard_page.dart';
 import 'features/dashboard/settings_page.dart';
 import 'features/dashboard/metric_details_page.dart';
 import 'features/dashboard/dashboard_shell.dart';
@@ -50,7 +51,7 @@ class AthrApp extends StatelessWidget {
       routerConfig: GoRouter(
         initialLocation: '/login',
         routes: [
-          GoRoute(path: '/', redirect: (_, _) => '/login'),
+          GoRoute(path: '/', redirect: (_, __) => '/login'),
           GoRoute(
             path: '/login',
             builder: (context, state) =>
@@ -95,15 +96,39 @@ class AthrApp extends StatelessWidget {
               ),
             ],
           ),
-          GoRoute(path: '/admin', builder: (context, state) => AdminPage()),
+          // Admin login route (outside the shell)
+          GoRoute(
+            path: '/admin/login',
+            builder: (context, state) => const AdminLoginPage(),
+          ),
+          // Admin dashboard route
+          GoRoute(
+            path: '/admin/dashboard',
+            builder: (context, state) => const AdminDashboardPage(),
+          ),
         ],
         redirect: (BuildContext context, GoRouterState state) {
           final bool loggedIn = firebaseService.currentUser != null;
           final bool onLoginPage = state.matchedLocation == '/login';
           final bool onSignupPage = state.matchedLocation == '/signup';
+          final bool onAdminLoginPage = state.matchedLocation == '/admin/login';
+          final bool onAdminRoute = state.matchedLocation.startsWith('/admin');
 
+          // Handle admin routes
+          if (onAdminRoute) {
+            // If not logged in and not on admin login page, redirect to admin login
+            if (!loggedIn && !onAdminLoginPage) {
+              return '/admin/login';
+            }
+            // If logged in and on admin login page, redirect to admin dashboard
+            if (loggedIn && onAdminLoginPage) {
+              return '/admin/dashboard';
+            }
+          }
+
+          // Handle regular app routes
           // If not logged in and not on an auth route, redirect to login
-          if (!loggedIn && !onLoginPage && !onSignupPage) {
+          if (!loggedIn && !onLoginPage && !onSignupPage && !onAdminRoute) {
             return '/login';
           }
 
